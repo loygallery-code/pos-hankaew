@@ -151,10 +151,16 @@ function computeChange(){
   const rawInput = parseFloat(document.getElementById('coCash').value)||0;
   const rate = Number(APP_SETTINGS.rate_buy_thb)||0;
   const cashLak = isThb ? rawInput * rate : rawInput;
-  const change = Math.max(0, cashLak-total);
-  document.getElementById('coChange').textContent = fmt(change);
-  renderChangeBreakdown(change);
-  return { rawInput, cashLak, change };
+  let change = Math.max(0, cashLak-total);
+  let rounded = change;
+  if(change > 0){ rounded = Math.round(change/1000)*1000; }
+  document.getElementById('coChange').textContent = fmt(rounded);
+  const noteEl = document.getElementById('coRoundNote');
+  if(noteEl){
+    noteEl.textContent = (rounded !== Math.round(change)) ? `(ປັດເສດຈາກ ${fmt(change)} ໃຫ້ເປັນຈຳນວນເຕັມ 1,000 ກີບ)` : '';
+  }
+  renderChangeBreakdown(rounded);
+  return { rawInput, cashLak, change: rounded };
 }
 document.getElementById('coCash').addEventListener('input', computeChange);
 
