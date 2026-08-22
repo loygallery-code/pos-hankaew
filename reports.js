@@ -9,7 +9,7 @@ async function renderReports(){
   else if(range==='week'){ cutoffIso = new Date(now.getTime()-7*86400000).toISOString(); }
   else if(range==='month'){ cutoffIso = new Date(now.getTime()-30*86400000).toISOString(); }
 
-  let query = supabase.from('sales').select('*, sale_items(*)').order('created_at', {ascending:false});
+  let query = sb.from('sales').select('*, sale_items(*)').order('created_at', {ascending:false});
   if(cutoffIso) query = query.gte('created_at', cutoffIso);
   const { data: sales, error } = await query;
   if(error){ alert('ໂຫຼດລາຍງານບໍ່ໄດ້: ' + error.message); return; }

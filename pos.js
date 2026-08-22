@@ -6,7 +6,7 @@ let cart = [];
 let currentCat = 'ທັງໝົດ';
 
 async function loadProducts(){
-  const { data, error } = await supabase.from('products').select('*').order('name');
+  const { data, error } = await sb.from('products').select('*').order('name');
   if(error){ alert('ໂຫຼດສິນຄ້າບໍ່ໄດ້: ' + error.message); return; }
   products = data;
 }
@@ -141,7 +141,7 @@ document.getElementById('coConfirm').addEventListener('click', async ()=>{
     const totalCost = cart.reduce((s,c)=>s+c.cost*c.qty,0);
     const cash = parseFloat(document.getElementById('coCash').value)||null;
 
-    const { data: sale, error: saleErr } = await supabase.from('sales')
+    const { data: sale, error: saleErr } = await sb.from('sales')
       .insert({ total, total_cost: totalCost, profit: total-totalCost, cash_received: cash })
       .select().single();
     if(saleErr) throw saleErr;
@@ -149,14 +149,14 @@ document.getElementById('coConfirm').addEventListener('click', async ()=>{
     const items = cart.map(c => ({
       sale_id: sale.id, product_id: c.productId, name: c.name, unit: c.unit, qty: c.qty, price: c.price, cost: c.cost
     }));
-    const { error: itemsErr } = await supabase.from('sale_items').insert(items);
+    const { error: itemsErr } = await sb.from('sale_items').insert(items);
     if(itemsErr) throw itemsErr;
 
     // ຫຼຸດສະຕັອກ ທີລະລາຍການ
     for(const c of cart){
       const p = products.find(pp=>pp.id===c.productId);
       const newQty = +(p.qty - c.qty).toFixed(2);
-      const { error: updErr } = await supabase.from('products').update({ qty: newQty }).eq('id', p.id);
+      const { error: updErr } = await sb.from('products').update({ qty: newQty }).eq('id', p.id);
       if(updErr) throw updErr;
       p.qty = newQty;
     }

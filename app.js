@@ -10,13 +10,13 @@ let APP_SETTINGS = { shop_name: 'ຮ້ານເອື້ອຍ', pin: '1234' };
 let APP_CATEGORIES = [];
 
 async function loadSettings(){
-  const { data, error } = await supabase.from('app_settings').select('*').eq('id', 1).single();
+  const { data, error } = await sb.from('app_settings').select('*').eq('id', 1).single();
   if(!error && data) APP_SETTINGS = data;
   return APP_SETTINGS;
 }
 
 async function loadCategories(){
-  const { data, error } = await supabase.from('categories').select('name').order('created_at');
+  const { data, error } = await sb.from('categories').select('name').order('created_at');
   if(!error && data) APP_CATEGORIES = data.map(c => c.name);
   return APP_CATEGORIES;
 }

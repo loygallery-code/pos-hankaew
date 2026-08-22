@@ -15,9 +15,9 @@ function renderCatList(){
     chip.style.cssText = 'display:flex;align-items:center;gap:6px;';
     chip.innerHTML = `${c} <button style="border:none;background:none;color:var(--brick);cursor:pointer;font-weight:700;">✕</button>`;
     chip.querySelector('button').addEventListener('click', async ()=>{
-      const { count } = await supabase.from('products').select('id', {count:'exact', head:true}).eq('category', c);
+      const { count } = await sb.from('products').select('id', {count:'exact', head:true}).eq('category', c);
       if(count>0){ alert('ຍັງມີສິນຄ້າໃນໝວດນີ້ຢູ່, ບໍ່ສາມາດລຶບໄດ້'); return; }
-      const { error } = await supabase.from('categories').delete().eq('name', c);
+      const { error } = await sb.from('categories').delete().eq('name', c);
       if(error){ alert('ລຶບບໍ່ສຳເລັດ: '+error.message); return; }
       await loadCategories();
       renderCatList();
@@ -29,7 +29,7 @@ document.getElementById('addCatBtn').addEventListener('click', async ()=>{
   const v = document.getElementById('newCatInput').value.trim();
   if(!v) return;
   if(APP_CATEGORIES.includes(v)){ document.getElementById('newCatInput').value=''; return; }
-  const { error } = await supabase.from('categories').insert({ name: v });
+  const { error } = await sb.from('categories').insert({ name: v });
   if(error){ alert('ເພີ່ມບໍ່ສຳເລັດ: '+error.message); return; }
   await loadCategories();
   document.getElementById('newCatInput').value = '';
@@ -45,7 +45,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
     updates.pin = pin;
   }
   if(Object.keys(updates).length===0) return;
-  const { error } = await supabase.from('app_settings').update(updates).eq('id', 1);
+  const { error } = await sb.from('app_settings').update(updates).eq('id', 1);
   if(error){ alert('ບັນທຶກບໍ່ສຳເລັດ: '+error.message); return; }
   Object.assign(APP_SETTINGS, updates);
   document.getElementById('shopNameLbl').textContent = APP_SETTINGS.shop_name;

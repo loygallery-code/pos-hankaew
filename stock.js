@@ -5,7 +5,7 @@ let products = [];
 let currentStockCat = 'ທັງໝົດ';
 
 async function loadProducts(){
-  const { data, error } = await supabase.from('products').select('*').order('name');
+  const { data, error } = await sb.from('products').select('*').order('name');
   if(error){ alert('ໂຫຼດສິນຄ້າບໍ່ໄດ້: ' + error.message); return; }
   products = data;
 }
@@ -47,7 +47,7 @@ function renderStock(){
   tbody.querySelectorAll('[data-act="edit"]').forEach(b=>b.addEventListener('click', ()=>openProductModal(b.dataset.id)));
   tbody.querySelectorAll('[data-act="del"]').forEach(b=>b.addEventListener('click', async ()=>{
     if(!confirm('ລຶບສິນຄ້ານີ້ອອກຈາກສາງ?')) return;
-    const { error } = await supabase.from('products').delete().eq('id', b.dataset.id);
+    const { error } = await sb.from('products').delete().eq('id', b.dataset.id);
     if(error){ alert('ລຶບບໍ່ສຳເລັດ: '+error.message); return; }
     products = products.filter(p=>p.id!==b.dataset.id);
     renderStock();
@@ -101,11 +101,11 @@ document.getElementById('pmSave').addEventListener('click', async ()=>{
   btn.disabled = true;
   try{
     if(id){
-      const { data: updated, error } = await supabase.from('products').update(data).eq('id', id).select().single();
+      const { data: updated, error } = await sb.from('products').update(data).eq('id', id).select().single();
       if(error) throw error;
       Object.assign(products.find(x=>x.id===id), updated);
     } else {
-      const { data: inserted, error } = await supabase.from('products').insert(data).select().single();
+      const { data: inserted, error } = await sb.from('products').insert(data).select().single();
       if(error) throw error;
       products.push(inserted);
     }
@@ -168,17 +168,17 @@ document.getElementById('importExcelFile').addEventListener('change', e=>{
 
       // ສ້າງໝວດໃໝ່ໃນ Supabase ຖ້າມີ
       for(const cat of newCats){
-        await supabase.from('categories').insert({ name: cat });
+        await sb.from('categories').insert({ name: cat });
       }
       if(newCats.length){ await loadCategories(); }
 
       if(toInsert.length){
-        const { error } = await supabase.from('products').insert(toInsert);
+        const { error } = await sb.from('products').insert(toInsert);
         if(error) throw error;
       }
       for(const u of toUpdate){
         const { id, ...fields } = u;
-        const { error } = await supabase.from('products').update(fields).eq('id', id);
+        const { error } = await sb.from('products').update(fields).eq('id', id);
         if(error) throw error;
       }
 
