@@ -19,6 +19,18 @@
   <div id="lockErr"></div>
 </div>
 
+<script>
+(function(){
+  try{
+    var until = parseInt(localStorage.getItem('pos_unlocked_until')||'0',10);
+    if(Date.now() < until){
+      document.getElementById('lock').style.display='none';
+      document.getElementById('app').style.display='flex';
+    }
+  }catch(e){}
+})();
+</script>
+
 <div id="app">
   <header>
     <div class="brand">
