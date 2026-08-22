@@ -17,12 +17,17 @@ async function renderReports(){
   const totalRevenue = sales.reduce((s,x)=>s+Number(x.total),0);
   const totalCost = sales.reduce((s,x)=>s+Number(x.total_cost),0);
   const totalProfit = sales.reduce((s,x)=>s+Number(x.profit),0);
+  const thbSales = sales.filter(s=>s.paid_currency==='THB');
+  const thbReceivedTotal = thbSales.reduce((s,x)=>s+Number(x.cash_foreign||0),0);
+  const thbLakEquivTotal = thbSales.reduce((s,x)=>s+Number(x.total),0);
 
   document.getElementById('reportStats').innerHTML = `
-    <div class="stat"><div class="label">ຍອດຂາຍ</div><div class="val mono">${fmt(totalRevenue)}</div></div>
+    <div class="stat"><div class="label">ຍອດຂາຍ (ທຽບເທົ່າກີບ)</div><div class="val mono">${fmt(totalRevenue)}</div></div>
     <div class="stat"><div class="label">ຕົ້ນທຶນ</div><div class="val mono">${fmt(totalCost)}</div></div>
     <div class="stat profit"><div class="label">ກຳໄລສຸດທິ</div><div class="val mono">${fmt(totalProfit)}</div></div>
     <div class="stat"><div class="label">ຈຳນວນບິນ</div><div class="val">${sales.length}</div></div>
+    <div class="stat"><div class="label">ບິນທີ່ຮັບເປັນເງິນບາດ</div><div class="val">${thbSales.length} ບິນ</div></div>
+    <div class="stat"><div class="label">ຍອດຮັບເປັນບາດ (ຈາກລູກຄ້າ)</div><div class="val mono">${thbReceivedTotal.toLocaleString('en-US')} ບາດ<br><span style="font-size:11px;font-weight:400;color:var(--ink-soft);">= ${fmt(thbLakEquivTotal)}</span></div></div>
   `;
 
   const tbody = document.getElementById('salesTbody');
@@ -31,12 +36,15 @@ async function renderReports(){
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
     const itemCount = (s.sale_items||[]).length;
+    const payCell = s.paid_currency==='THB'
+      ? `<span class="pill" style="background:#FDE8D0;color:var(--marigold-dark);">${Number(s.cash_foreign||0).toLocaleString('en-US')} ບາດ</span>`
+      : `<span class="pill">ກີບ</span>`;
     tr.innerHTML = `<td>${new Date(s.created_at).toLocaleString('lo-LA',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-      <td>${itemCount} ລາຍການ</td><td class="mono">${fmt(s.total)}</td><td class="mono">${fmt(s.profit)}</td>`;
+      <td>${itemCount} ລາຍການ</td><td>${payCell}</td><td class="mono">${fmt(s.total)}</td><td class="mono">${fmt(s.profit)}</td>`;
     tr.addEventListener('click', ()=>openSaleDetail(s));
     tbody.appendChild(tr);
   });
-  if(sales.length===0) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">ບໍ່ມີຂໍ້ມູນໃນຊ່ວງນີ້</td></tr>';
+  if(sales.length===0) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);">ບໍ່ມີຂໍ້ມູນໃນຊ່ວງນີ້</td></tr>';
 
   const tally = {};
   sales.forEach(s => (s.sale_items||[]).forEach(it=>{
