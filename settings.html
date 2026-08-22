@@ -32,6 +32,7 @@
       <a href="index.html" data-page="pos">ຂາຍເຄື່ອງ</a>
       <a href="stock.html" data-page="stock">ສາງສິນຄ້າ</a>
       <a href="reports.html" data-page="reports">ລາຍງານ</a>
+      <a href="exchange.html" data-page="exchange">ແລກປ່ຽນເງິນຕາ</a>
       <a href="settings.html" data-page="settings">ຕັ້ງຄ່າ</a>
       <a href="#" id="lockBtn" style="opacity:.7;">ລັອກ 🔒</a>
     </nav>
@@ -47,6 +48,13 @@
         <button class="btn btn-primary" id="saveSettingsBtn">ບັນທຶກ</button>
       </div>
       <div class="modal" style="width:auto;max-width:none;">
+        <h3>ອັດຕາແລກປ່ຽນ ກີບ ⇄ ບາດ</h3>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-6px;">ຕັ້ງອັດຕາເອງຕາມທີ່ຮ້ານກຳນົດ — ໃຊ້ໃນໜ້າ "ແລກປ່ຽນເງິນຕາ"</p>
+        <div class="field"><label>ອັດຕາຊື້ບາດ (1 ບາດ = ? ກີບ) — ຮ້ານຈ່າຍກີບ ຮັບບາດ</label><input id="setRateBuy" type="number" min="0"></div>
+        <div class="field"><label>ອັດຕາຂາຍບາດ (1 ບາດ = ? ກີບ) — ຮ້ານຮັບກີບ ຈ່າຍບາດ</label><input id="setRateSell" type="number" min="0"></div>
+        <button class="btn btn-primary" id="saveRatesBtn">ບັນທຶກອັດຕາ</button>
+      </div>
+      <div class="modal" style="width:auto;max-width:none;">
         <h3>ໝວດສິນຄ້າ</h3>
         <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-6px;">ເພີ່ມ/ລຶບໝວດສິນຄ້າໄດ້ຕາມຮ້ານ</p>
         <div id="catList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
@@ -54,6 +62,18 @@
           <div class="field"><input id="newCatInput" type="text" placeholder="ຊື່ໝວດໃໝ່…"></div>
           <button class="btn btn-primary" style="width:auto;" id="addCatBtn">ເພີ່ມ</button>
         </div>
+      </div>
+      <div class="modal" style="width:auto;max-width:none;">
+        <h3>ຂະໜາດໃບບິນພິມ</h3>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-6px;">ເລືອກຂະໜາດເຈ້ຍໃຫ້ຕົງກັບເຄື່ອງພິມຂອງຮ້ານ</p>
+        <div class="field">
+          <label>ຄວາມກວ້າງເຈ້ຍ</label>
+          <select id="setReceiptWidth">
+            <option value="80mm">80mm (ມາດຕະຖານທົ່ວໄປ)</option>
+            <option value="58mm">58mm (ຈໍນ້ອຍ)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="saveReceiptWidthBtn">ບັນທຶກ</button>
       </div>
       <div class="modal" style="width:auto;max-width:none;">
         <h3>ກ່ຽວກັບຂໍ້ມູນ</h3>

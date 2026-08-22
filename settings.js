@@ -4,6 +4,9 @@
 function fillSettingsForm(){
   document.getElementById('setShopName').value = APP_SETTINGS.shop_name;
   document.getElementById('setPin').value = '';
+  document.getElementById('setRateBuy').value = APP_SETTINGS.rate_buy_thb || '';
+  document.getElementById('setRateSell').value = APP_SETTINGS.rate_sell_thb || '';
+  document.getElementById('setReceiptWidth').value = APP_SETTINGS.receipt_width || '80mm';
   renderCatList();
 }
 function renderCatList(){
@@ -49,6 +52,24 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
   if(error){ alert('ບັນທຶກບໍ່ສຳເລັດ: '+error.message); return; }
   Object.assign(APP_SETTINGS, updates);
   document.getElementById('shopNameLbl').textContent = APP_SETTINGS.shop_name;
+  alert('ບັນທຶກສຳເລັດ');
+});
+
+document.getElementById('saveRatesBtn').addEventListener('click', async ()=>{
+  const rateBuy = parseFloat(document.getElementById('setRateBuy').value)||0;
+  const rateSell = parseFloat(document.getElementById('setRateSell').value)||0;
+  if(rateBuy<=0 || rateSell<=0){ alert('ກະລຸນາໃສ່ອັດຕາໃຫ້ຄົບ'); return; }
+  const { error } = await sb.from('app_settings').update({ rate_buy_thb: rateBuy, rate_sell_thb: rateSell }).eq('id', 1);
+  if(error){ alert('ບັນທຶກບໍ່ສຳເລັດ: '+error.message); return; }
+  Object.assign(APP_SETTINGS, { rate_buy_thb: rateBuy, rate_sell_thb: rateSell });
+  alert('ບັນທຶກອັດຕາສຳເລັດ');
+});
+
+document.getElementById('saveReceiptWidthBtn').addEventListener('click', async ()=>{
+  const width = document.getElementById('setReceiptWidth').value;
+  const { error } = await sb.from('app_settings').update({ receipt_width: width }).eq('id', 1);
+  if(error){ alert('ບັນທຶກບໍ່ສຳເລັດ: '+error.message); return; }
+  Object.assign(APP_SETTINGS, { receipt_width: width });
   alert('ບັນທຶກສຳເລັດ');
 });
 

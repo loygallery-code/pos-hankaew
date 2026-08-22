@@ -124,17 +124,39 @@ document.getElementById('checkoutBtn').addEventListener('click', ()=>{
   document.getElementById('coCount').textContent = cart.length+' ລາຍການ';
   document.getElementById('coTotal').textContent = fmt(total);
   document.getElementById('coCash').value='';
+  document.getElementById('coIsThb').checked = false;
   document.getElementById('coChange').textContent='0 ₭';
   document.getElementById('coBreakdown').innerHTML='';
+  updateCashLabel();
   document.getElementById('checkoutModalBg').classList.add('open');
 });
-document.getElementById('coCash').addEventListener('input', ()=>{
+
+function updateCashLabel(){
+  const isThb = document.getElementById('coIsThb').checked;
+  document.getElementById('coCashLabel').textContent = isThb ? 'ຮັບເງິນມາ (ບາດ)' : 'ຮັບເງິນມາ (ກີບ)';
+  const note = document.getElementById('coThbNote');
+  if(isThb){
+    const rate = Number(APP_SETTINGS.rate_buy_thb)||0;
+    note.style.display = 'block';
+    note.textContent = `ອັດຕາຊື້ບາດ: 1 ບາດ = ${rate.toLocaleString('en-US')} ກີບ`;
+  } else {
+    note.style.display = 'none';
+  }
+}
+document.getElementById('coIsThb').addEventListener('change', ()=>{ updateCashLabel(); computeChange(); });
+
+function computeChange(){
   const total = cart.reduce((s,c)=>s+c.price*c.qty,0);
-  const cash = parseFloat(document.getElementById('coCash').value)||0;
-  const change = Math.max(0, cash-total);
+  const isThb = document.getElementById('coIsThb').checked;
+  const rawInput = parseFloat(document.getElementById('coCash').value)||0;
+  const rate = Number(APP_SETTINGS.rate_buy_thb)||0;
+  const cashLak = isThb ? rawInput * rate : rawInput;
+  const change = Math.max(0, cashLak-total);
   document.getElementById('coChange').textContent = fmt(change);
   renderChangeBreakdown(change);
-});
+  return { rawInput, cashLak, change };
+}
+document.getElementById('coCash').addEventListener('input', computeChange);
 
 const DENOMS = [100000, 50000, 20000, 10000, 5000, 2000, 1000];
 function renderChangeBreakdown(change){
@@ -156,17 +178,26 @@ function renderChangeBreakdown(change){
 }
 document.getElementById('coCancel').addEventListener('click', ()=>document.getElementById('checkoutModalBg').classList.remove('open'));
 
+let lastSaleForPrint = null;
+
 document.getElementById('coConfirm').addEventListener('click', async ()=>{
   const btn = document.getElementById('coConfirm');
   btn.disabled = true; btn.textContent = 'ກຳລັງບັນທຶກ…';
   try{
     const total = cart.reduce((s,c)=>s+c.price*c.qty,0);
     const totalCost = cart.reduce((s,c)=>s+c.cost*c.qty,0);
-    const cash = parseFloat(document.getElementById('coCash').value)||null;
+    const isThb = document.getElementById('coIsThb').checked;
+    const { rawInput, cashLak, change } = computeChange();
+    const rate = Number(APP_SETTINGS.rate_buy_thb)||null;
 
-    const { data: sale, error: saleErr } = await sb.from('sales')
-      .insert({ total, total_cost: totalCost, profit: total-totalCost, cash_received: cash })
-      .select().single();
+    const saleRecord = {
+      total, total_cost: totalCost, profit: total-totalCost,
+      cash_received: rawInput ? cashLak : null,
+      paid_currency: isThb ? 'THB' : 'LAK',
+      cash_foreign: isThb ? rawInput : null,
+      fx_rate_used: isThb ? rate : null,
+    };
+    const { data: sale, error: saleErr } = await sb.from('sales').insert(saleRecord).select().single();
     if(saleErr) throw saleErr;
 
     const items = cart.map(c => ({
@@ -184,29 +215,54 @@ document.getElementById('coConfirm').addEventListener('click', async ()=>{
       p.qty = newQty;
     }
 
-    printReceipt({ items: cart, total, cash, change: cash ? Math.max(0, cash-total) : null });
-    cart=[]; renderCart(); renderGrid();
+    lastSaleForPrint = {
+      items: cart, total,
+      cash: rawInput ? cashLak : null, change,
+      isThb, cashForeign: isThb ? rawInput : null, rate: isThb ? rate : null,
+    };
+
+    document.getElementById('doneTotal').textContent = fmt(total);
+    document.getElementById('doneChange').textContent = fmt(change);
     document.getElementById('checkoutModalBg').classList.remove('open');
+    document.getElementById('doneModalBg').classList.add('open');
+
+    cart=[]; renderCart(); renderGrid();
   }catch(err){
     alert('ບັນທຶກການຂາຍບໍ່ສຳເລັດ: ' + err.message + '\nກະລຸນາກວດການເຊື່ອມຕໍ່ອິນເຕີເນັດແລ້ວລອງໃໝ່');
   }finally{
-    btn.disabled = false; btn.textContent = 'ຢືນຢັນ & ພິມໃບບິນ';
+    btn.disabled = false; btn.textContent = 'ຢືນຢັນການຂາຍ';
   }
 });
 
+document.getElementById('doneClose').addEventListener('click', ()=>{
+  document.getElementById('doneModalBg').classList.remove('open');
+  lastSaleForPrint = null;
+});
+document.getElementById('donePrint').addEventListener('click', ()=>{
+  if(lastSaleForPrint) printReceipt(lastSaleForPrint);
+  document.getElementById('doneModalBg').classList.remove('open');
+  lastSaleForPrint = null;
+});
+
 function printReceipt(sale){
+  document.documentElement.style.setProperty('--receipt-width', APP_SETTINGS.receipt_width || '80mm');
   const d = new Date();
   let html = `<div style="text-align:center;font-weight:700;">${APP_SETTINGS.shop_name}</div>
-  <div style="text-align:center;font-size:11px;margin-bottom:8px;">${d.toLocaleString('lo-LA')}</div>
+  <div style="text-align:center;font-size:10px;margin-bottom:8px;">${d.toLocaleString('lo-LA')}</div>
   <div>------------------------------</div>`;
   sale.items.forEach(it=>{
     html += `<div>${it.name}</div><div style="display:flex;justify-content:space-between;"><span>${it.qty} ${it.unit} x ${fmt(it.price)}</span><span>${fmt(it.qty*it.price)}</span></div>`;
   });
   html += `<div>------------------------------</div>
   <div style="display:flex;justify-content:space-between;font-weight:700;"><span>ລວມ</span><span>${fmt(sale.total)}</span></div>`;
+  if(sale.isThb && sale.cashForeign){
+    html += `<div style="display:flex;justify-content:space-between;"><span>ຮັບເງິນ (ບາດ)</span><span>${sale.cashForeign.toLocaleString('en-US')} ບາດ</span></div>
+    <div style="display:flex;justify-content:space-between;"><span>ອັດຕາ</span><span>${sale.rate.toLocaleString('en-US')}</span></div>`;
+  } else if(sale.cash){
+    html += `<div style="display:flex;justify-content:space-between;"><span>ຮັບເງິນ</span><span>${fmt(sale.cash)}</span></div>`;
+  }
   if(sale.cash){
-    html += `<div style="display:flex;justify-content:space-between;"><span>ຮັບເງິນ</span><span>${fmt(sale.cash)}</span></div>
-    <div style="display:flex;justify-content:space-between;"><span>ເງິນທອນ</span><span>${fmt(sale.change)}</span></div>`;
+    html += `<div style="display:flex;justify-content:space-between;"><span>ເງິນທອນ</span><span>${fmt(sale.change)}</span></div>`;
   }
   html += `<div style="text-align:center;margin-top:10px;">ຂອບໃຈທີ່ອຸດໜູນ 🙏</div>`;
   document.getElementById('printArea').innerHTML = html;

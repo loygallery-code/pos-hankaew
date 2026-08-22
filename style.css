@@ -166,9 +166,10 @@ tbody tr.low td{background:var(--brick-tint);}
 
 .receipt-print{display:none;}
 @media print{
+  @page{ size: var(--receipt-width, 80mm) auto; margin: 2mm; }
   body *{visibility:hidden;}
   .receipt-print, .receipt-print *{visibility:visible;}
-  .receipt-print{display:block;position:fixed;top:0;left:0;width:100%;padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .receipt-print{display:block;position:fixed;top:0;left:0;width:var(--receipt-width, 80mm);padding:0;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4;}
 }
 
 @media (max-width:880px){
