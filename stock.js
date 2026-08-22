@@ -33,7 +33,10 @@ function renderStock(){
     const tr = document.createElement('tr');
     if(p.qty<=p.low_threshold) tr.className='low';
     tr.innerHTML = `
-      <td><strong>${p.name}</strong>${p.barcode?`<div style="font-size:10.5px;color:var(--ink-soft);">${p.barcode}</div>`:''}</td>
+      <td><div style="display:flex;align-items:center;gap:8px;">
+        ${p.image_url ? `<img src="${p.image_url}" style="width:34px;height:34px;border-radius:7px;object-fit:cover;flex-shrink:0;">` : `<div style="width:34px;height:34px;border-radius:7px;background:var(--paper-2);flex-shrink:0;"></div>`}
+        <div><strong>${p.name}</strong>${p.barcode?`<div style="font-size:10.5px;color:var(--ink-soft);">${p.barcode}</div>`:''}</div>
+      </div></td>
       <td>${p.category}</td>
       <td>${p.unit}</td>
       <td>${p.qty} ${p.qty<=p.low_threshold?'<span class="pill low">ໃກ້ໝົດ</span>':''}</td>
@@ -64,6 +67,20 @@ function renderStock(){
 document.getElementById('stockSearch').addEventListener('input', renderStock);
 document.getElementById('addProductBtn').addEventListener('click', ()=>openProductModal(null));
 
+async function uploadProductImage(file){
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${uid()}.${ext}`;
+  const { error } = await sb.storage.from('product-images').upload(path, file, { upsert: false });
+  if(error) throw error;
+  const { data } = sb.storage.from('product-images').getPublicUrl(path);
+  return data.publicUrl;
+}
+document.getElementById('pmImageFile').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  const preview = document.getElementById('pmImagePreview');
+  if(file){ preview.src = URL.createObjectURL(file); preview.style.display='block'; }
+});
+
 function populateCatSelect(){
   document.getElementById('pmCategory').innerHTML = APP_CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
@@ -80,6 +97,11 @@ function openProductModal(id){
   document.getElementById('pmQty').value = p ? p.qty : '';
   document.getElementById('pmLow').value = p ? p.low_threshold : '';
   document.getElementById('pmBarcode').value = p ? (p.barcode||'') : '';
+  document.getElementById('pmImageFile').value = '';
+  document.getElementById('pmId').dataset.existingImage = p ? (p.image_url||'') : '';
+  const preview = document.getElementById('pmImagePreview');
+  if(p && p.image_url){ preview.src = p.image_url; preview.style.display='block'; }
+  else { preview.src=''; preview.style.display='none'; }
   document.getElementById('productModalBg').classList.add('open');
 }
 document.getElementById('pmCancel').addEventListener('click', ()=>document.getElementById('productModalBg').classList.remove('open'));
@@ -87,19 +109,26 @@ document.getElementById('pmSave').addEventListener('click', async ()=>{
   const name = document.getElementById('pmName').value.trim();
   if(!name){ alert('ກະລຸນາໃສ່ຊື່ສິນຄ້າ'); return; }
   const id = document.getElementById('pmId').value;
-  const data = {
-    name,
-    category: document.getElementById('pmCategory').value,
-    unit: document.getElementById('pmUnit').value,
-    cost: parseFloat(document.getElementById('pmCost').value)||0,
-    price: parseFloat(document.getElementById('pmPrice').value)||0,
-    qty: parseFloat(document.getElementById('pmQty').value)||0,
-    low_threshold: parseFloat(document.getElementById('pmLow').value)||0,
-    barcode: document.getElementById('pmBarcode').value.trim() || null,
-  };
   const btn = document.getElementById('pmSave');
   btn.disabled = true;
   try{
+    let imageUrl = document.getElementById('pmId').dataset.existingImage || null;
+    const file = document.getElementById('pmImageFile').files[0];
+    if(file){
+      btn.textContent = 'ກຳລັງອັບໂຫລດຮູບ…';
+      imageUrl = await uploadProductImage(file);
+    }
+    const data = {
+      name,
+      category: document.getElementById('pmCategory').value,
+      unit: document.getElementById('pmUnit').value,
+      cost: parseFloat(document.getElementById('pmCost').value)||0,
+      price: parseFloat(document.getElementById('pmPrice').value)||0,
+      qty: parseFloat(document.getElementById('pmQty').value)||0,
+      low_threshold: parseFloat(document.getElementById('pmLow').value)||0,
+      barcode: document.getElementById('pmBarcode').value.trim() || null,
+      image_url: imageUrl,
+    };
     if(id){
       const { data: updated, error } = await sb.from('products').update(data).eq('id', id).select().single();
       if(error) throw error;
@@ -115,6 +144,7 @@ document.getElementById('pmSave').addEventListener('click', async ()=>{
     alert('ບັນທຶກບໍ່ສຳເລັດ: ' + err.message);
   }finally{
     btn.disabled = false;
+    btn.textContent = 'ບັນທຶກ';
   }
 });
 

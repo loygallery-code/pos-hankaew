@@ -9,6 +9,21 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7
 let APP_SETTINGS = { shop_name: 'ຮ້ານເອື້ອຍ', pin: '1234' };
 let APP_CATEGORIES = [];
 
+const UNLOCK_KEY = 'pos_unlocked_until';
+const UNLOCK_DURATION_MS = 8 * 60 * 60 * 1000; // ຈື່ຈຳການປົດລັອກໄວ້ 8 ຊົ່ວໂມງ
+
+function isUnlocked(){
+  const until = parseInt(localStorage.getItem(UNLOCK_KEY) || '0', 10);
+  return Date.now() < until;
+}
+function setUnlocked(){
+  localStorage.setItem(UNLOCK_KEY, String(Date.now() + UNLOCK_DURATION_MS));
+}
+function lockNow(){
+  localStorage.removeItem(UNLOCK_KEY);
+  location.reload();
+}
+
 async function loadSettings(){
   const { data, error } = await sb.from('app_settings').select('*').eq('id', 1).single();
   if(!error && data) APP_SETTINGS = data;
@@ -79,11 +94,22 @@ async function initApp(pageName, onUnlock){
   document.querySelectorAll('nav a').forEach(a=>{
     a.classList.toggle('active', a.dataset.page === pageName);
   });
-  buildPinPad(onUnlock);
+  const lockBtn = document.getElementById('lockBtn');
+  if(lockBtn) lockBtn.addEventListener('click', lockNow);
+
+  if(isUnlocked()){
+    document.getElementById('lock').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    onUnlock();
+    return;
+  }
+
+  const unlockAndGo = () => { setUnlocked(); onUnlock(); };
+  buildPinPad(unlockAndGo);
   renderPinDots();
   document.addEventListener('keydown', e=>{
     if(document.getElementById('app').style.display === 'flex') return;
-    if(/^[0-9]$/.test(e.key)) pinPress(e.key, onUnlock);
-    if(e.key === 'Backspace') pinPress('⌫', onUnlock);
+    if(/^[0-9]$/.test(e.key)) pinPress(e.key, unlockAndGo);
+    if(e.key === 'Backspace') pinPress('⌫', unlockAndGo);
   });
 }

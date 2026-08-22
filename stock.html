@@ -33,6 +33,7 @@
       <a href="stock.html" data-page="stock">ສາງສິນຄ້າ</a>
       <a href="reports.html" data-page="reports">ລາຍງານ</a>
       <a href="settings.html" data-page="settings">ຕັ້ງຄ່າ</a>
+      <a href="#" id="lockBtn" style="opacity:.7;">ລັອກ 🔒</a>
     </nav>
   </header>
 
@@ -64,6 +65,11 @@
   <div class="modal">
     <h3 id="productModalTitle">ເພີ່ມສິນຄ້າ</h3>
     <input type="hidden" id="pmId">
+    <div class="field">
+      <label>ຮູບສິນຄ້າ (ຖ້າມີ)</label>
+      <input id="pmImageFile" type="file" accept="image/*">
+      <img id="pmImagePreview" style="max-width:100%;max-height:140px;border-radius:8px;margin-top:8px;display:none;object-fit:cover;">
+    </div>
     <div class="field"><label>ຊື່ສິນຄ້າ</label><input id="pmName" type="text" placeholder="ເຊັ່ນ: ນ້ຳປາ ແກ້ວ"></div>
     <div class="field-row">
       <div class="field"><label>ໝວດ</label><select id="pmCategory"></select></div>

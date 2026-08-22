@@ -38,6 +38,7 @@ function renderGrid(){
     const card = document.createElement('button');
     card.className = 'pcard' + (p.qty<=p.low_threshold ? ' low' : '');
     card.innerHTML = `
+      ${p.image_url ? `<img src="${p.image_url}" style="width:100%;height:76px;object-fit:cover;border-radius:8px;margin-bottom:2px;">` : ''}
       <span class="catdot" style="background:${catColor(p.category)}"></span>
       <span class="name">${p.name}</span>
       <span class="price mono">${fmt(p.price)}</span>
