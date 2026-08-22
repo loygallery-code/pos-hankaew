@@ -29,9 +29,11 @@ async function renderReports(){
   tbody.innerHTML = '';
   sales.slice(0,50).forEach(s=>{
     const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
     const itemCount = (s.sale_items||[]).length;
     tr.innerHTML = `<td>${new Date(s.created_at).toLocaleString('lo-LA',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
       <td>${itemCount} ລາຍການ</td><td class="mono">${fmt(s.total)}</td><td class="mono">${fmt(s.profit)}</td>`;
+    tr.addEventListener('click', ()=>openSaleDetail(s));
     tbody.appendChild(tr);
   });
   if(sales.length===0) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">ບໍ່ມີຂໍ້ມູນໃນຊ່ວງນີ້</td></tr>';
@@ -60,5 +62,34 @@ async function renderReports(){
   });
 }
 document.getElementById('reportRange').addEventListener('change', renderReports);
+
+function openSaleDetail(s){
+  const d = new Date(s.created_at);
+  const rows = (s.sale_items||[]).map(it => `
+    <div class="cart-row">
+      <div style="flex:1;">
+        <div class="ci-name">${it.name}</div>
+        <div class="ci-sub">${it.qty} ${it.unit} × ${fmt(it.price)}</div>
+      </div>
+      <div class="ci-total mono">${fmt(it.qty*it.price)}</div>
+    </div>`).join('');
+  let payLine = '';
+  if(s.paid_currency==='THB' && s.cash_foreign){
+    payLine = `<div class="rf-row"><span>ຮັບເງິນ</span><span>${Number(s.cash_foreign).toLocaleString('en-US')} ບາດ (ອັດຕາ ${s.fx_rate_used?Number(s.fx_rate_used).toLocaleString('en-US'):'-'})</span></div>`;
+  } else if(s.cash_received){
+    payLine = `<div class="rf-row"><span>ຮັບເງິນ</span><span>${fmt(s.cash_received)}</span></div>`;
+  }
+  document.getElementById('sdTime').textContent = d.toLocaleString('lo-LA');
+  document.getElementById('sdItems').innerHTML = rows || '<div class="empty-note">ບໍ່ມີລາຍການ</div>';
+  document.getElementById('sdTotal').textContent = fmt(s.total);
+  document.getElementById('sdCost').textContent = fmt(s.total_cost);
+  document.getElementById('sdProfit').textContent = fmt(s.profit);
+  document.getElementById('sdPayLine').innerHTML = payLine;
+  document.getElementById('saleDetailModalBg').classList.add('open');
+}
+document.getElementById('sdClose').addEventListener('click', ()=>document.getElementById('saleDetailModalBg').classList.remove('open'));
+document.getElementById('saleDetailModalBg').addEventListener('click', e=>{
+  if(e.target.id==='saleDetailModalBg') document.getElementById('saleDetailModalBg').classList.remove('open');
+});
 
 initApp('reports', renderReports);

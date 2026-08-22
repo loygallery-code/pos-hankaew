@@ -5,6 +5,7 @@ let products = [];
 let cart = [];
 let currentCat = 'ທັງໝົດ';
 const PRODUCTS_CACHE_KEY = 'pos_products_cache';
+const PENDING_KEY = 'pos_pending_sales';
 
 function loadProductsFromCache(){
   try{
@@ -18,6 +19,68 @@ async function loadProducts(){
   products = data;
   try{ localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(data)); }catch(e){}
 }
+
+// ---------------- ຄິວລໍ sync ຕອນອອຟລາຍ ----------------
+function getPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); }catch(e){ return []; } }
+function savePending(list){ try{ localStorage.setItem(PENDING_KEY, JSON.stringify(list)); }catch(e){} updateOnlineBadge(); }
+
+function updateOnlineBadge(){
+  const badge = document.getElementById('onlineBadge');
+  if(!badge) return;
+  const pendingCount = getPending().length;
+  if(!navigator.onLine){
+    badge.textContent = pendingCount>0 ? `🔴 ອອຟລາຍ (${pendingCount} ບິນລໍ sync)` : '🔴 ອອຟລາຍ';
+  } else if(pendingCount>0){
+    badge.textContent = `🟡 ກຳລັງ sync (${pendingCount})`;
+  } else {
+    badge.textContent = '🟢 ອອນລາຍ';
+  }
+}
+
+function queueOffline(saleRecord, cartItems){
+  cartItems.forEach(c=>{
+    const p = products.find(pp=>pp.id===c.productId);
+    if(p) p.qty = +(p.qty - c.qty).toFixed(2);
+  });
+  try{ localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products)); }catch(e){}
+  const pending = getPending();
+  pending.push({ saleRecord, items: cartItems, queuedAt: Date.now() });
+  savePending(pending);
+}
+
+async function trySyncPending(){
+  if(!navigator.onLine) { updateOnlineBadge(); return; }
+  let pending = getPending();
+  if(pending.length===0){ updateOnlineBadge(); return; }
+  const remaining = [];
+  let anySynced = false;
+  for(const p of pending){
+    try{
+      const { data: sale, error: saleErr } = await sb.from('sales').insert(p.saleRecord).select().single();
+      if(saleErr) throw saleErr;
+      const items = p.items.map(c => ({
+        sale_id: sale.id, product_id: c.productId, name: c.name, unit: c.unit, qty: c.qty, price: c.price, cost: c.cost
+      }));
+      const { error: itemsErr } = await sb.from('sale_items').insert(items);
+      if(itemsErr) throw itemsErr;
+      for(const c of p.items){
+        const { data: prod } = await sb.from('products').select('qty').eq('id', c.productId).single();
+        if(prod){
+          const newQty = +(prod.qty - c.qty).toFixed(2);
+          await sb.from('products').update({ qty: newQty }).eq('id', c.productId);
+        }
+      }
+      anySynced = true;
+    }catch(err){
+      remaining.push(p);
+    }
+  }
+  savePending(remaining);
+  if(anySynced){ await loadProducts(); renderGrid(); }
+}
+window.addEventListener('online', trySyncPending);
+window.addEventListener('offline', updateOnlineBadge);
+setInterval(trySyncPending, 30000);
 
 function renderCats(){
   const wrap = document.getElementById('posCats');
@@ -211,36 +274,49 @@ document.getElementById('coConfirm').addEventListener('click', async ()=>{
       cash_foreign: isThb ? rawInput : null,
       fx_rate_used: isThb ? rate : null,
     };
-    const { data: sale, error: saleErr } = await sb.from('sales').insert(saleRecord).select().single();
-    if(saleErr) throw saleErr;
 
-    const items = cart.map(c => ({
-      sale_id: sale.id, product_id: c.productId, name: c.name, unit: c.unit, qty: c.qty, price: c.price, cost: c.cost
-    }));
-    const { error: itemsErr } = await sb.from('sale_items').insert(items);
-    if(itemsErr) throw itemsErr;
-
-    // ຫຼຸດສະຕັອກ ທີລະລາຍການ
-    for(const c of cart){
-      const p = products.find(pp=>pp.id===c.productId);
-      const newQty = +(p.qty - c.qty).toFixed(2);
-      const { error: updErr } = await sb.from('products').update({ qty: newQty }).eq('id', p.id);
-      if(updErr) throw updErr;
-      p.qty = newQty;
+    let wentOffline = false;
+    if(navigator.onLine){
+      try{
+        const { data: sale, error: saleErr } = await sb.from('sales').insert(saleRecord).select().single();
+        if(saleErr) throw saleErr;
+        const items = cart.map(c => ({
+          sale_id: sale.id, product_id: c.productId, name: c.name, unit: c.unit, qty: c.qty, price: c.price, cost: c.cost
+        }));
+        const { error: itemsErr } = await sb.from('sale_items').insert(items);
+        if(itemsErr) throw itemsErr;
+        for(const c of cart){
+          const p = products.find(pp=>pp.id===c.productId);
+          const newQty = +(p.qty - c.qty).toFixed(2);
+          const { error: updErr } = await sb.from('products').update({ qty: newQty }).eq('id', p.id);
+          if(updErr) throw updErr;
+          p.qty = newQty;
+        }
+        try{ localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products)); }catch(e){}
+      }catch(networkErr){
+        wentOffline = true;
+        queueOffline(saleRecord, cart);
+      }
+    } else {
+      wentOffline = true;
+      queueOffline(saleRecord, cart);
     }
 
     lastSaleForPrint = {
       items: cart, total,
       cash: rawInput ? cashLak : null, change, rawChange,
       isThb, cashForeign: isThb ? rawInput : null, rate: isThb ? rate : null,
+      offline: wentOffline,
     };
 
     document.getElementById('doneTotal').textContent = fmt(total);
     document.getElementById('doneChange').textContent = fmt(change);
+    document.getElementById('doneModalBg').querySelector('h3').textContent = wentOffline ? '✅ ຂາຍສຳເລັດ (ບໍ່ມີເນັດ — ຈະ sync ອັດຕະໂນມັດ)' : '✅ ຂາຍສຳເລັດ';
     document.getElementById('checkoutModalBg').classList.remove('open');
     document.getElementById('doneModalBg').classList.add('open');
 
     cart=[]; renderCart(); renderGrid();
+    updateOnlineBadge();
   }catch(err){
     alert('ບັນທຶກການຂາຍບໍ່ສຳເລັດ: ' + err.message + '\nກະລຸນາກວດການເຊື່ອມຕໍ່ອິນເຕີເນັດແລ້ວລອງໃໝ່');
   }finally{
@@ -291,6 +367,8 @@ initApp('pos', async ()=>{
   renderCats();
   renderGrid();
   renderCart();
+  updateOnlineBadge();
+  trySyncPending();
   await loadProducts();
   renderGrid(); // refresh with latest stock once network data arrives
 });

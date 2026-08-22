@@ -74,6 +74,25 @@
   </main>
 </div>
 
+<!-- ລາຍລະອຽດບິນ -->
+<div class="modal-bg" id="saleDetailModalBg">
+  <div class="modal">
+    <h3>ລາຍລະອຽດບິນ</h3>
+    <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:10px;" id="sdTime"></div>
+    <div id="sdItems" style="margin-bottom:10px;max-height:280px;overflow-y:auto;"></div>
+    <div class="jag"></div>
+    <div style="padding-top:10px;">
+      <div class="rf-row"><span>ຕົ້ນທຶນ</span><span id="sdCost" class="mono"></span></div>
+      <div class="rf-row"><span>ກຳໄລ</span><span id="sdProfit" class="mono"></span></div>
+      <div id="sdPayLine"></div>
+      <div class="rf-total"><span>ລວມ</span><span id="sdTotal" class="mono"></span></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="sdClose">ປິດ</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="supabase-client.js"></script>
