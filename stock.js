@@ -3,11 +3,19 @@
 // ================================================================
 let products = [];
 let currentStockCat = 'ທັງໝົດ';
+const PRODUCTS_CACHE_KEY = 'pos_products_cache';
 
+function loadProductsFromCache(){
+  try{
+    const cached = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || 'null');
+    if(cached) products = cached;
+  }catch(e){}
+}
 async function loadProducts(){
   const { data, error } = await sb.from('products').select('*').order('name');
-  if(error){ alert('ໂຫຼດສິນຄ້າບໍ່ໄດ້: ' + error.message); return; }
+  if(error){ if(!products.length) alert('ໂຫຼດສິນຄ້າບໍ່ໄດ້: ' + error.message); return; }
   products = data;
+  try{ localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(data)); }catch(e){}
 }
 
 function renderStockCats(){
@@ -224,7 +232,9 @@ document.getElementById('importExcelFile').addEventListener('change', e=>{
 });
 
 initApp('stock', async ()=>{
-  await loadProducts();
+  loadProductsFromCache();
   renderStockCats();
   renderStock();
+  await loadProducts();
+  renderStock(); // refresh with latest stock once network data arrives
 });

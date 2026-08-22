@@ -4,11 +4,19 @@
 let products = [];
 let cart = [];
 let currentCat = 'ທັງໝົດ';
+const PRODUCTS_CACHE_KEY = 'pos_products_cache';
 
+function loadProductsFromCache(){
+  try{
+    const cached = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || 'null');
+    if(cached) products = cached;
+  }catch(e){}
+}
 async function loadProducts(){
   const { data, error } = await sb.from('products').select('*').order('name');
-  if(error){ alert('ໂຫຼດສິນຄ້າບໍ່ໄດ້: ' + error.message); return; }
+  if(error){ if(!products.length) alert('ໂຫຼດສິນຄ້າບໍ່ໄດ້: ' + error.message); return; }
   products = data;
+  try{ localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(data)); }catch(e){}
 }
 
 function renderCats(){
@@ -151,16 +159,16 @@ function computeChange(){
   const rawInput = parseFloat(document.getElementById('coCash').value)||0;
   const rate = Number(APP_SETTINGS.rate_buy_thb)||0;
   const cashLak = isThb ? rawInput * rate : rawInput;
-  let change = Math.max(0, cashLak-total);
-  let rounded = change;
-  if(change > 0){ rounded = Math.round(change/1000)*1000; }
+  const rawChange = Math.max(0, cashLak-total);
+  let rounded = rawChange;
+  if(rawChange > 0){ rounded = Math.round(rawChange/1000)*1000; }
   document.getElementById('coChange').textContent = fmt(rounded);
   const noteEl = document.getElementById('coRoundNote');
   if(noteEl){
-    noteEl.textContent = (rounded !== Math.round(change)) ? `(ປັດເສດຈາກ ${fmt(change)} ໃຫ້ເປັນຈຳນວນເຕັມ 1,000 ກີບ)` : '';
+    noteEl.textContent = (rounded !== Math.round(rawChange)) ? `(ປັດເສດຈາກ ${fmt(rawChange)} ໃຫ້ເປັນຈຳນວນເຕັມ 1,000 ກີບ)` : '';
   }
   renderChangeBreakdown(rounded);
-  return { rawInput, cashLak, change: rounded };
+  return { rawInput, cashLak, change: rounded, rawChange };
 }
 document.getElementById('coCash').addEventListener('input', computeChange);
 
@@ -193,7 +201,7 @@ document.getElementById('coConfirm').addEventListener('click', async ()=>{
     const total = cart.reduce((s,c)=>s+c.price*c.qty,0);
     const totalCost = cart.reduce((s,c)=>s+c.cost*c.qty,0);
     const isThb = document.getElementById('coIsThb').checked;
-    const { rawInput, cashLak, change } = computeChange();
+    const { rawInput, cashLak, change, rawChange } = computeChange();
     const rate = Number(APP_SETTINGS.rate_buy_thb)||null;
 
     const saleRecord = {
@@ -223,7 +231,7 @@ document.getElementById('coConfirm').addEventListener('click', async ()=>{
 
     lastSaleForPrint = {
       items: cart, total,
-      cash: rawInput ? cashLak : null, change,
+      cash: rawInput ? cashLak : null, change, rawChange,
       isThb, cashForeign: isThb ? rawInput : null, rate: isThb ? rate : null,
     };
 
@@ -269,6 +277,9 @@ function printReceipt(sale){
   }
   if(sale.cash){
     html += `<div style="display:flex;justify-content:space-between;"><span>ເງິນທອນ</span><span>${fmt(sale.change)}</span></div>`;
+    if(sale.rawChange !== undefined && Math.round(sale.rawChange) !== sale.change){
+      html += `<div style="font-size:9px;color:#555;">(ປັດເສດຈາກ ${fmt(sale.rawChange)})</div>`;
+    }
   }
   html += `<div style="text-align:center;margin-top:10px;">ຂອບໃຈທີ່ອຸດໜູນ 🙏</div>`;
   document.getElementById('printArea').innerHTML = html;
@@ -276,8 +287,10 @@ function printReceipt(sale){
 }
 
 initApp('pos', async ()=>{
-  await loadProducts();
+  loadProductsFromCache();
   renderCats();
   renderGrid();
   renderCart();
+  await loadProducts();
+  renderGrid(); // refresh with latest stock once network data arrives
 });

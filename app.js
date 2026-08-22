@@ -6,11 +6,13 @@
 const fmt = n => Math.round(n||0).toLocaleString('en-US') + ' ₭';
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
-let APP_SETTINGS = { shop_name: 'ຮ້ານເອື້ອຍ', pin: '1234' };
+let APP_SETTINGS = { shop_name: 'ຮ້ານເສີມຊັບ', pin: '1234' };
 let APP_CATEGORIES = [];
 
 const UNLOCK_KEY = 'pos_unlocked_until';
 const UNLOCK_DURATION_MS = 8 * 60 * 60 * 1000; // ຈື່ຈຳການປົດລັອກໄວ້ 8 ຊົ່ວໂມງ
+const SETTINGS_CACHE_KEY = 'pos_settings_cache';
+const CATEGORIES_CACHE_KEY = 'pos_categories_cache';
 
 function isUnlocked(){
   const until = parseInt(localStorage.getItem(UNLOCK_KEY) || '0', 10);
@@ -24,15 +26,39 @@ function lockNow(){
   location.reload();
 }
 
+function loadSettingsFromCache(){
+  try{
+    const cached = JSON.parse(localStorage.getItem(SETTINGS_CACHE_KEY) || 'null');
+    if(cached) APP_SETTINGS = cached;
+  }catch(e){}
+}
+function loadCategoriesFromCache(){
+  try{
+    const cached = JSON.parse(localStorage.getItem(CATEGORIES_CACHE_KEY) || 'null');
+    if(cached) APP_CATEGORIES = cached;
+  }catch(e){}
+}
+
+function applyShopName(){
+  const lbl = document.getElementById('shopNameLbl'); if(lbl) lbl.textContent = APP_SETTINGS.shop_name;
+  const lockLbl = document.getElementById('lockShopName'); if(lockLbl) lockLbl.textContent = APP_SETTINGS.shop_name;
+}
+
 async function loadSettings(){
   const { data, error } = await sb.from('app_settings').select('*').eq('id', 1).single();
-  if(!error && data) APP_SETTINGS = data;
+  if(!error && data){
+    APP_SETTINGS = data;
+    try{ localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(data)); }catch(e){}
+  }
   return APP_SETTINGS;
 }
 
 async function loadCategories(){
   const { data, error } = await sb.from('categories').select('name').order('created_at');
-  if(!error && data) APP_CATEGORIES = data.map(c => c.name);
+  if(!error && data){
+    APP_CATEGORIES = data.map(c => c.name);
+    try{ localStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(APP_CATEGORIES)); }catch(e){}
+  }
   return APP_CATEGORIES;
 }
 
@@ -84,32 +110,36 @@ function pinPress(k, onUnlock){
 }
 
 /**
- * ເອີ້ນຄັ້ງດຽວໃນທຸກໜ້າ — ໂຫຼດ settings+categories ຈາກ Supabase,
- * ສະແດງໜ້າ lock screen, ແລ້ວເອີ້ນ onUnlock() ຫຼັງໃສ່ PIN ຖືກ
+ * ເອີ້ນຄັ້ງດຽວໃນທຸກໜ້າ — ໃຊ້ຂໍ້ມູນທີ່ຈື່ໄວ້ໃນເຄື່ອງທັນທີ (ໄວ),
+ * ແລ້ວອັບເດດຂໍ້ມູນຫຼ້າສຸດຈາກ Supabase ຢູ່ເບື້ອງຫຼັງແບບບໍ່ໃຫ້ຄ້າງ
  */
-async function initApp(pageName, onUnlock){
-  await loadSettings();
-  await loadCategories();
-  document.getElementById('shopNameLbl').textContent = APP_SETTINGS.shop_name;
+function initApp(pageName, onUnlock){
+  loadSettingsFromCache();
+  loadCategoriesFromCache();
+  applyShopName();
   document.querySelectorAll('nav a').forEach(a=>{
     a.classList.toggle('active', a.dataset.page === pageName);
   });
   const lockBtn = document.getElementById('lockBtn');
   if(lockBtn) lockBtn.addEventListener('click', lockNow);
 
-  if(isUnlocked()){
+  const alreadyUnlocked = isUnlocked();
+  if(alreadyUnlocked){
     document.getElementById('lock').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     onUnlock();
-    return;
+  } else {
+    const unlockAndGo = () => { setUnlocked(); onUnlock(); };
+    buildPinPad(unlockAndGo);
+    renderPinDots();
+    document.addEventListener('keydown', e=>{
+      if(document.getElementById('app').style.display === 'flex') return;
+      if(/^[0-9]$/.test(e.key)) pinPress(e.key, unlockAndGo);
+      if(e.key === 'Backspace') pinPress('⌫', unlockAndGo);
+    });
   }
 
-  const unlockAndGo = () => { setUnlocked(); onUnlock(); };
-  buildPinPad(unlockAndGo);
-  renderPinDots();
-  document.addEventListener('keydown', e=>{
-    if(document.getElementById('app').style.display === 'flex') return;
-    if(/^[0-9]$/.test(e.key)) pinPress(e.key, unlockAndGo);
-    if(e.key === 'Backspace') pinPress('⌫', unlockAndGo);
-  });
+  // ອັບເດດ settings/categories ຫຼ້າສຸດຢູ່ເບື້ອງຫຼັງ (ບໍ່ບລັອກໜ້າຈໍ)
+  loadSettings().then(applyShopName);
+  loadCategories();
 }
