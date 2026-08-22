@@ -125,13 +125,35 @@ document.getElementById('checkoutBtn').addEventListener('click', ()=>{
   document.getElementById('coTotal').textContent = fmt(total);
   document.getElementById('coCash').value='';
   document.getElementById('coChange').textContent='0 ₭';
+  document.getElementById('coBreakdown').innerHTML='';
   document.getElementById('checkoutModalBg').classList.add('open');
 });
 document.getElementById('coCash').addEventListener('input', ()=>{
   const total = cart.reduce((s,c)=>s+c.price*c.qty,0);
   const cash = parseFloat(document.getElementById('coCash').value)||0;
-  document.getElementById('coChange').textContent = fmt(Math.max(0,cash-total));
+  const change = Math.max(0, cash-total);
+  document.getElementById('coChange').textContent = fmt(change);
+  renderChangeBreakdown(change);
 });
+
+const DENOMS = [100000, 50000, 20000, 10000, 5000, 2000, 1000];
+function renderChangeBreakdown(change){
+  const wrap = document.getElementById('coBreakdown');
+  let remaining = Math.round(change);
+  const rows = [];
+  DENOMS.forEach(d=>{
+    const count = Math.floor(remaining / d);
+    if(count > 0){ rows.push([d, count]); remaining -= count * d; }
+  });
+  if(rows.length === 0){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `
+    <div style="font-size:11px;color:var(--ink-soft);font-weight:700;margin-bottom:4px;">ແຍກໃບເງິນທອນ</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${rows.map(([d,c])=>`<span class="pill" style="background:var(--paper-2);color:var(--ink);">ໃບ ${d.toLocaleString('en-US')} × ${c}</span>`).join('')}
+    </div>
+    ${remaining>0 ? `<div style="font-size:11px;color:var(--brick);margin-top:4px;">ເສດ ${remaining} ກີບ (ຕ່ຳກວ່າໃບ 1,000)</div>` : ''}
+  `;
+}
 document.getElementById('coCancel').addEventListener('click', ()=>document.getElementById('checkoutModalBg').classList.remove('open'));
 
 document.getElementById('coConfirm').addEventListener('click', async ()=>{
@@ -162,7 +184,7 @@ document.getElementById('coConfirm').addEventListener('click', async ()=>{
       p.qty = newQty;
     }
 
-    printReceipt({ items: cart, total });
+    printReceipt({ items: cart, total, cash, change: cash ? Math.max(0, cash-total) : null });
     cart=[]; renderCart(); renderGrid();
     document.getElementById('checkoutModalBg').classList.remove('open');
   }catch(err){
@@ -181,8 +203,12 @@ function printReceipt(sale){
     html += `<div>${it.name}</div><div style="display:flex;justify-content:space-between;"><span>${it.qty} ${it.unit} x ${fmt(it.price)}</span><span>${fmt(it.qty*it.price)}</span></div>`;
   });
   html += `<div>------------------------------</div>
-  <div style="display:flex;justify-content:space-between;font-weight:700;"><span>ລວມ</span><span>${fmt(sale.total)}</span></div>
-  <div style="text-align:center;margin-top:10px;">ຂອບໃຈທີ່ອຸດໜູນ 🙏</div>`;
+  <div style="display:flex;justify-content:space-between;font-weight:700;"><span>ລວມ</span><span>${fmt(sale.total)}</span></div>`;
+  if(sale.cash){
+    html += `<div style="display:flex;justify-content:space-between;"><span>ຮັບເງິນ</span><span>${fmt(sale.cash)}</span></div>
+    <div style="display:flex;justify-content:space-between;"><span>ເງິນທອນ</span><span>${fmt(sale.change)}</span></div>`;
+  }
+  html += `<div style="text-align:center;margin-top:10px;">ຂອບໃຈທີ່ອຸດໜູນ 🙏</div>`;
   document.getElementById('printArea').innerHTML = html;
   window.print();
 }
