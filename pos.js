@@ -59,7 +59,7 @@ async function trySyncPending(){
       const { data: sale, error: saleErr } = await sb.from('sales').insert(p.saleRecord).select().single();
       if(saleErr) throw saleErr;
       const items = p.items.map(c => ({
-        sale_id: sale.id, product_id: c.productId, name: c.name, unit: c.unit, qty: c.qty, price: c.price, cost: c.cost
+        sale_id: sale.id, product_id: c.productId, name: c.name, unit: c.unit, qty: c.qty, price: c.price, cost: c.cost, category: c.category
       }));
       const { error: itemsErr } = await sb.from('sale_items').insert(items);
       if(itemsErr) throw itemsErr;
@@ -137,7 +137,7 @@ function addToCart(p){
     if(existing.qty + step > p.qty){ alert('ສິນຄ້າໃນສາງບໍ່ພຽງພໍ'); return; }
     existing.qty = +(existing.qty+step).toFixed(2);
   } else {
-    cart.push({productId:p.id, name:p.name, unit:p.unit, price:p.price, cost:p.cost, qty:step, maxQty:p.qty});
+    cart.push({productId:p.id, name:p.name, unit:p.unit, price:p.price, cost:p.cost, category:p.category, qty:step, maxQty:p.qty});
   }
   renderCart();
 }
@@ -190,17 +190,46 @@ function renderCart(){
 }
 document.getElementById('clearCartBtn').addEventListener('click', ()=>{ cart=[]; renderCart(); });
 
-document.getElementById('checkoutBtn').addEventListener('click', ()=>{
+let allDebtors = [];
+async function loadDebtorsForCheckout(){
+  const { data, error } = await sb.from('debtors').select('*').order('name');
+  if(!error && data) allDebtors = data;
+  const sel = document.getElementById('coDebtorSelect');
+  sel.innerHTML = '<option value="">— ເລືອກລູກໜີ້ —</option>' + allDebtors.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+}
+document.getElementById('coAddDebtorBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('coNewDebtorName').value.trim();
+  if(!name){ alert('ກະລຸນາໃສ່ຊື່ລູກໜີ້'); return; }
+  const { data, error } = await sb.from('debtors').insert({ name }).select().single();
+  if(error){ alert('ເພີ່ມບໍ່ສຳເລັດ: '+error.message); return; }
+  await loadDebtorsForCheckout();
+  document.getElementById('coDebtorSelect').value = data.id;
+  document.getElementById('coNewDebtorName').value = '';
+});
+
+document.getElementById('checkoutBtn').addEventListener('click', async ()=>{
   const total = cart.reduce((s,c)=>s+c.price*c.qty,0);
   document.getElementById('coCount').textContent = cart.length+' ລາຍການ';
   document.getElementById('coTotal').textContent = fmt(total);
   document.getElementById('coCash').value='';
   document.getElementById('coIsThb').checked = false;
+  document.getElementById('coIsCredit').checked = false;
+  document.getElementById('coNewDebtorName').value = '';
   document.getElementById('coChange').textContent='0 ₭';
   document.getElementById('coBreakdown').innerHTML='';
   updateCashLabel();
+  updateCreditUI();
+  await loadDebtorsForCheckout();
   document.getElementById('checkoutModalBg').classList.add('open');
 });
+
+function updateCreditUI(){
+  const isCredit = document.getElementById('coIsCredit').checked;
+  document.getElementById('coCreditFields').style.display = isCredit ? 'block' : 'none';
+  document.getElementById('coCashFields').style.display = isCredit ? 'none' : 'block';
+  document.getElementById('coIsThb').disabled = isCredit;
+}
+document.getElementById('coIsCredit').addEventListener('change', updateCreditUI);
 
 function updateCashLabel(){
   const isThb = document.getElementById('coIsThb').checked;
@@ -259,20 +288,28 @@ let lastSaleForPrint = null;
 
 document.getElementById('coConfirm').addEventListener('click', async ()=>{
   const btn = document.getElementById('coConfirm');
+  const isCredit = document.getElementById('coIsCredit').checked;
+  let debtorId = null;
+  if(isCredit){
+    debtorId = document.getElementById('coDebtorSelect').value;
+    if(!debtorId){ alert('ກະລຸນາເລືອກ ຫຼື ເພີ່ມລູກໜີ້ກ່ອນ'); return; }
+  }
   btn.disabled = true; btn.textContent = 'ກຳລັງບັນທຶກ…';
   try{
     const total = cart.reduce((s,c)=>s+c.price*c.qty,0);
     const totalCost = cart.reduce((s,c)=>s+c.cost*c.qty,0);
-    const isThb = document.getElementById('coIsThb').checked;
-    const { rawInput, cashLak, change, rawChange } = computeChange();
+    const isThb = !isCredit && document.getElementById('coIsThb').checked;
+    const { rawInput, cashLak, change, rawChange } = isCredit ? {rawInput:0,cashLak:0,change:0,rawChange:0} : computeChange();
     const rate = Number(APP_SETTINGS.rate_buy_thb)||null;
 
     const saleRecord = {
       total, total_cost: totalCost, profit: total-totalCost,
-      cash_received: rawInput ? cashLak : null,
+      cash_received: isCredit ? null : (rawInput ? cashLak : null),
       paid_currency: isThb ? 'THB' : 'LAK',
       cash_foreign: isThb ? rawInput : null,
       fx_rate_used: isThb ? rate : null,
+      is_credit: isCredit,
+      debtor_id: isCredit ? debtorId : null,
     };
 
     let wentOffline = false;
@@ -281,7 +318,7 @@ document.getElementById('coConfirm').addEventListener('click', async ()=>{
         const { data: sale, error: saleErr } = await sb.from('sales').insert(saleRecord).select().single();
         if(saleErr) throw saleErr;
         const items = cart.map(c => ({
-          sale_id: sale.id, product_id: c.productId, name: c.name, unit: c.unit, qty: c.qty, price: c.price, cost: c.cost
+          sale_id: sale.id, product_id: c.productId, name: c.name, unit: c.unit, qty: c.qty, price: c.price, cost: c.cost, category: c.category
         }));
         const { error: itemsErr } = await sb.from('sale_items').insert(items);
         if(itemsErr) throw itemsErr;
@@ -302,16 +339,19 @@ document.getElementById('coConfirm').addEventListener('click', async ()=>{
       queueOffline(saleRecord, cart);
     }
 
+    const debtorName = isCredit ? (allDebtors.find(d=>d.id===debtorId)?.name || document.getElementById('coDebtorSelect').selectedOptions[0]?.textContent) : null;
     lastSaleForPrint = {
       items: cart, total,
       cash: rawInput ? cashLak : null, change, rawChange,
       isThb, cashForeign: isThb ? rawInput : null, rate: isThb ? rate : null,
-      offline: wentOffline,
+      offline: wentOffline, isCredit, debtorName,
     };
 
     document.getElementById('doneTotal').textContent = fmt(total);
-    document.getElementById('doneChange').textContent = fmt(change);
-    document.getElementById('doneModalBg').querySelector('h3').textContent = wentOffline ? '✅ ຂາຍສຳເລັດ (ບໍ່ມີເນັດ — ຈະ sync ອັດຕະໂນມັດ)' : '✅ ຂາຍສຳເລັດ';
+    document.getElementById('doneChange').textContent = isCredit ? 'ຕິດໜີ້' : fmt(change);
+    document.getElementById('doneModalBg').querySelector('h3').textContent = isCredit
+      ? `✅ ບັນທຶກຕິດໜີ້ສຳເລັດ (${debtorName})`
+      : (wentOffline ? '✅ ຂາຍສຳເລັດ (ບໍ່ມີເນັດ — ຈະ sync ອັດຕະໂນມັດ)' : '✅ ຂາຍສຳເລັດ');
     document.getElementById('checkoutModalBg').classList.remove('open');
     document.getElementById('doneModalBg').classList.add('open');
 
@@ -345,7 +385,9 @@ function printReceipt(sale){
   });
   html += `<div>------------------------------</div>
   <div style="display:flex;justify-content:space-between;font-weight:700;"><span>ລວມ</span><span>${fmt(sale.total)}</span></div>`;
-  if(sale.isThb && sale.cashForeign){
+  if(sale.isCredit){
+    html += `<div style="text-align:center;font-weight:700;margin-top:6px;border:1px solid #999;padding:4px;">ຕິດໜີ້ — ${sale.debtorName||''}</div>`;
+  } else if(sale.isThb && sale.cashForeign){
     html += `<div style="display:flex;justify-content:space-between;"><span>ຮັບເງິນ (ບາດ)</span><span>${sale.cashForeign.toLocaleString('en-US')} ບາດ</span></div>
     <div style="display:flex;justify-content:space-between;"><span>ອັດຕາ</span><span>${sale.rate.toLocaleString('en-US')}</span></div>`;
   } else if(sale.cash){
