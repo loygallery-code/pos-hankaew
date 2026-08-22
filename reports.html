@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ລາຍງານ — ຮ້ານເອື້ອຍ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div id="lock">
+  <div style="width:44px;height:44px;border-radius:12px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--canopy-dark);font-size:20px;margin-bottom:14px;">ອ</div>
+  <h1>ຮ້ານເອື້ອຍ</h1>
+  <p>ໃສ່ລະຫັດຜ່ານເພື່ອເປີດລະບົບ</p>
+  <div class="pin-dots" id="pinDots"></div>
+  <div class="pin-pad" id="pinPad"></div>
+  <div id="lockErr"></div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="brand">
+      <div class="mark">ອ</div>
+      <div>
+        <h1 id="shopNameLbl">ຮ້ານເອື້ອຍ</h1>
+        <div class="sub">ລະບົບຂາຍ &amp; ຄຸ້ມຄອງສາງ</div>
+      </div>
+    </div>
+    <nav>
+      <a href="index.html" data-page="pos">ຂາຍເຄື່ອງ</a>
+      <a href="stock.html" data-page="stock">ສາງສິນຄ້າ</a>
+      <a href="reports.html" data-page="reports">ລາຍງານ</a>
+      <a href="settings.html" data-page="settings">ຕັ້ງຄ່າ</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <h2>ລາຍງານ</h2>
+      <select id="reportRange" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;">
+        <option value="today">ມື້ນີ້</option>
+        <option value="week">7 ວັນຫຼັງສຸດ</option>
+        <option value="month">30 ວັນຫຼັງສຸດ</option>
+        <option value="all">ທັງໝົດ</option>
+      </select>
+    </div>
+    <div class="stat-row" id="reportStats"></div>
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;">
+      <div>
+        <h3 style="font-size:13.5px;margin:0 0 8px;color:var(--ink-soft);">ປະຫວັດການຂາຍ</h3>
+        <div style="overflow-x:auto;"><table><thead><tr><th>ເວລາ</th><th>ລາຍການ</th><th>ລວມ</th><th>ກຳໄລ</th></tr></thead><tbody id="salesTbody"></tbody></table></div>
+      </div>
+      <div>
+        <h3 style="font-size:13.5px;margin:0 0 8px;color:var(--ink-soft);">ຂາຍດີສຸດ</h3>
+        <div id="bestSellers"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/config.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/reports.js"></script>
+</body>
+</html>

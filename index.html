@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ຂາຍເຄື່ອງ — ຮ້ານເອື້ອຍ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div id="lock">
+  <div style="width:44px;height:44px;border-radius:12px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--canopy-dark);font-size:20px;margin-bottom:14px;">ອ</div>
+  <h1>ຮ້ານເອື້ອຍ</h1>
+  <p>ໃສ່ລະຫັດຜ່ານເພື່ອເປີດລະບົບ</p>
+  <div class="pin-dots" id="pinDots"></div>
+  <div class="pin-pad" id="pinPad"></div>
+  <div id="lockErr"></div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="brand">
+      <div class="mark">ອ</div>
+      <div>
+        <h1 id="shopNameLbl">ຮ້ານເອື້ອຍ</h1>
+        <div class="sub">ລະບົບຂາຍ &amp; ຄຸ້ມຄອງສາງ</div>
+      </div>
+    </div>
+    <nav>
+      <a href="index.html" data-page="pos">ຂາຍເຄື່ອງ</a>
+      <a href="stock.html" data-page="stock">ສາງສິນຄ້າ</a>
+      <a href="reports.html" data-page="reports">ລາຍງານ</a>
+      <a href="settings.html" data-page="settings">ຕັ້ງຄ່າ</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="pos-grid">
+      <div>
+        <div class="search-row">
+          <input id="posSearch" type="text" placeholder="ຄົ້ນຫາ ຫຼື ຍິງບາໂຄດ ແລ້ວກົດ Enter…" autocomplete="off">
+        </div>
+        <div class="cat-row" id="posCats"></div>
+        <div class="product-grid" id="posGrid"></div>
+      </div>
+
+      <div class="receipt">
+        <div class="receipt-head">
+          <h2>ໃບບິນ</h2>
+          <span id="cartCount">0 ລາຍການ</span>
+        </div>
+        <div class="cart-items" id="cartItems">
+          <div class="empty-note">ຍັງບໍ່ມີສິນຄ້າໃນກະຕ່າ</div>
+        </div>
+        <div class="jag"></div>
+        <div class="receipt-foot">
+          <div class="rf-row"><span>ຈຳນວນລາຍການ</span><span id="rfCount">0</span></div>
+          <div class="rf-total"><span>ລວມທັງໝົດ</span><span id="rfTotal" class="mono">0 ₭</span></div>
+          <button class="btn btn-primary" id="checkoutBtn" disabled>ຄິດເງິນ / ຊຳລະ</button>
+          <button class="btn btn-ghost" id="clearCartBtn">ລ້າງກະຕ່າ</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Checkout modal -->
+<div class="modal-bg" id="checkoutModalBg">
+  <div class="modal">
+    <h3>ຢືນຢັນການຊຳລະ</h3>
+    <div class="rf-row"><span>ຈຳນວນລາຍການ</span><span id="coCount"></span></div>
+    <div class="rf-total"><span>ຍອດຊຳລະ</span><span id="coTotal" class="mono"></span></div>
+    <div class="field"><label>ຮັບເງິນມາ (ກີບ)</label><input id="coCash" type="number" min="0"></div>
+    <div class="rf-row" style="font-size:14px;font-weight:700;"><span>ເງິນທອນ</span><span id="coChange" class="mono">0 ₭</span></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="coCancel">ຍົກເລີກ</button>
+      <button class="btn btn-primary" id="coConfirm">ຢືນຢັນ &amp; ພິມໃບບິນ</button>
+    </div>
+  </div>
+</div>
+
+<div class="receipt-print" id="printArea"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/config.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/pos.js"></script>
+</body>
+</html>

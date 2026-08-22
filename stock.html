@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ສາງສິນຄ້າ — ຮ້ານເອື້ອຍ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div id="lock">
+  <div style="width:44px;height:44px;border-radius:12px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--canopy-dark);font-size:20px;margin-bottom:14px;">ອ</div>
+  <h1>ຮ້ານເອື້ອຍ</h1>
+  <p>ໃສ່ລະຫັດຜ່ານເພື່ອເປີດລະບົບ</p>
+  <div class="pin-dots" id="pinDots"></div>
+  <div class="pin-pad" id="pinPad"></div>
+  <div id="lockErr"></div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="brand">
+      <div class="mark">ອ</div>
+      <div>
+        <h1 id="shopNameLbl">ຮ້ານເອື້ອຍ</h1>
+        <div class="sub">ລະບົບຂາຍ &amp; ຄຸ້ມຄອງສາງ</div>
+      </div>
+    </div>
+    <nav>
+      <a href="index.html" data-page="pos">ຂາຍເຄື່ອງ</a>
+      <a href="stock.html" data-page="stock">ສາງສິນຄ້າ</a>
+      <a href="reports.html" data-page="reports">ລາຍງານ</a>
+      <a href="settings.html" data-page="settings">ຕັ້ງຄ່າ</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <h2>ສາງສິນຄ້າ</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input id="stockSearch" type="text" placeholder="ຄົ້ນຫາສິນຄ້າ…" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;">
+        <button class="btn btn-ghost" style="width:auto;margin-top:0;" id="downloadTemplateBtn">ດາວໂຫຼດແບບຟອມ Excel</button>
+        <button class="btn btn-ghost" style="width:auto;margin-top:0;" id="importExcelBtn">ນຳເຂົ້າຈາກ Excel</button>
+        <input type="file" id="importExcelFile" accept=".xlsx,.xls,.csv" style="display:none;">
+        <button class="btn btn-primary" style="width:auto;" id="addProductBtn">+ ເພີ່ມສິນຄ້າ</button>
+      </div>
+    </div>
+    <div class="stat-row" id="stockStats"></div>
+    <div class="cat-row" id="stockCats"></div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr>
+          <th>ສິນຄ້າ</th><th>ໝວດ</th><th>ໜ່ວຍ</th><th>ຄົງເຫຼືອ</th><th>ຕົ້ນທຶນ</th><th>ລາຄາຂາຍ</th><th>ກຳໄລ/ໜ່ວຍ</th><th></th>
+        </tr></thead>
+        <tbody id="stockTbody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-bg" id="productModalBg">
+  <div class="modal">
+    <h3 id="productModalTitle">ເພີ່ມສິນຄ້າ</h3>
+    <input type="hidden" id="pmId">
+    <div class="field"><label>ຊື່ສິນຄ້າ</label><input id="pmName" type="text" placeholder="ເຊັ່ນ: ນ້ຳປາ ແກ້ວ"></div>
+    <div class="field-row">
+      <div class="field"><label>ໝວດ</label><select id="pmCategory"></select></div>
+      <div class="field"><label>ໜ່ວຍ</label>
+        <select id="pmUnit">
+          <option value="ອັນ">ອັນ / ຫົວ</option>
+          <option value="ກິໂລ">ກິໂລກຣາມ (ກກ)</option>
+          <option value="ແມັດ">ແມັດ</option>
+          <option value="ຖົງ">ຖົງ</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>ຕົ້ນທຶນ / ໜ່ວຍ (ກີບ)</label><input id="pmCost" type="number" min="0"></div>
+      <div class="field"><label>ລາຄາຂາຍ / ໜ່ວຍ (ກີບ)</label><input id="pmPrice" type="number" min="0"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>ຈຳນວນຄົງເຫຼືອ</label><input id="pmQty" type="number" min="0" step="0.01"></div>
+      <div class="field"><label>ເຕືອນເມື່ອເຫຼືອຕ່ຳກວ່າ</label><input id="pmLow" type="number" min="0" step="0.01"></div>
+    </div>
+    <div class="field"><label>ບາໂຄດ (ຖ້າມີ)</label><input id="pmBarcode" type="text" placeholder="ຍິງບາໂຄດ ຫຼື ພິມມື"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="pmCancel">ຍົກເລີກ</button>
+      <button class="btn btn-primary" id="pmSave">ບັນທຶກ</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="assets/config.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/stock.js"></script>
+</body>
+</html>
