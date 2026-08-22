@@ -55,7 +55,11 @@
   <main>
     <div class="toolbar">
       <h2>ລູກໜີ້</h2>
-      <button class="btn btn-primary" style="width:auto;" id="addDebtorBtn">+ ເພີ່ມລູກໜີ້</button>
+      <div style="display:flex;gap:8px;">
+        <input id="debtorSearch" type="text" placeholder="ຄົ້ນຫາລູກໜີ້…" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;">
+        <button class="btn btn-ghost" style="width:auto;margin-top:0;" id="printDebtorsBtn">🖨 ພິມລາຍງານ</button>
+        <button class="btn btn-primary" style="width:auto;" id="addDebtorBtn">+ ເພີ່ມລູກໜີ້</button>
+      </div>
     </div>
     <div class="stat-row" id="debtorStats"></div>
     <div style="overflow-x:auto;">
@@ -101,6 +105,21 @@
     </div>
   </div>
 </div>
+
+<!-- ລາຍລະອຽດສິນຄ້າທີ່ຕິດໜີ້ (ຕໍ່ບິນ) -->
+<div class="modal-bg" id="creditItemsModalBg">
+  <div class="modal">
+    <h3>ສິນຄ້າທີ່ຕິດໜີ້</h3>
+    <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:10px;" id="ciTime"></div>
+    <div id="ciItems" style="max-height:280px;overflow-y:auto;"></div>
+    <div class="rf-total" style="margin-top:10px;"><span>ລວມ</span><span id="ciTotal" class="mono"></span></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="ciClose">ປິດ</button>
+    </div>
+  </div>
+</div>
+
+<div class="report-print" id="reportPrintArea"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>

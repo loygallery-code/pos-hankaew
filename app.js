@@ -44,6 +44,23 @@ function applyShopName(){
   const lockLbl = document.getElementById('lockShopName'); if(lockLbl) lockLbl.textContent = APP_SETTINGS.shop_name;
 }
 
+/**
+ * ພິມລາຍງານເປັນຕາຕະລາງ (A4) — ໃຊ້ຮ່ວມກັນທຸກໜ້າທີ່ມີ <div id="reportPrintArea">
+ */
+function printReportTable(title, headers, rows, extraHtml){
+  const area = document.getElementById('reportPrintArea');
+  if(!area) return;
+  const html = `
+    <h2 style="margin:0 0 2px;">${APP_SETTINGS.shop_name}</h2>
+    <div style="font-size:12px;color:#555;margin-bottom:14px;">${title} — ພິມວັນທີ ${new Date().toLocaleString('lo-LA')}</div>
+    ${extraHtml || ''}
+    <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>
+  `;
+  area.innerHTML = html;
+  window.print();
+}
+
 async function loadSettings(){
   const { data, error } = await sb.from('app_settings').select('*').eq('id', 1).single();
   if(!error && data){

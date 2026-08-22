@@ -30,6 +30,9 @@ async function renderReports(){
     <div class="stat"><div class="label">ຍອດຮັບເປັນບາດ (ຈາກລູກຄ້າ)</div><div class="val mono">${thbReceivedTotal.toLocaleString('en-US')} ບາດ<br><span style="font-size:11px;font-weight:400;color:var(--ink-soft);">= ${fmt(thbLakEquivTotal)}</span></div></div>
   `;
 
+  lastReportSales = sales;
+  lastReportRangeLabel = document.getElementById('reportRange').selectedOptions[0].textContent;
+
   const tbody = document.getElementById('salesTbody');
   tbody.innerHTML = '';
   sales.slice(0,50).forEach(s=>{
@@ -98,6 +101,21 @@ function openSaleDetail(s){
 document.getElementById('sdClose').addEventListener('click', ()=>document.getElementById('saleDetailModalBg').classList.remove('open'));
 document.getElementById('saleDetailModalBg').addEventListener('click', e=>{
   if(e.target.id==='saleDetailModalBg') document.getElementById('saleDetailModalBg').classList.remove('open');
+});
+
+let lastReportSales = [];
+let lastReportRangeLabel = '';
+document.getElementById('printReportBtn').addEventListener('click', ()=>{
+  const rows = lastReportSales.slice(0,200).map(s => [
+    new Date(s.created_at).toLocaleString('lo-LA',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),
+    (s.sale_items||[]).length + ' ລາຍການ',
+    s.is_credit ? 'ຕິດໜີ້' : (s.paid_currency==='THB' ? `${Number(s.cash_foreign||0).toLocaleString('en-US')} ບາດ` : 'ກີບ'),
+    fmt(s.total), fmt(s.profit)
+  ]);
+  const totalRevenue = lastReportSales.reduce((s,x)=>s+Number(x.total),0);
+  const totalProfit = lastReportSales.reduce((s,x)=>s+Number(x.profit),0);
+  const extra = `<div class="rp-stats"><div><strong>ຍອດຂາຍ:</strong> ${fmt(totalRevenue)}</div><div><strong>ກຳໄລ:</strong> ${fmt(totalProfit)}</div><div><strong>ຈຳນວນບິນ:</strong> ${lastReportSales.length}</div></div>`;
+  printReportTable(`ລາຍງານການຂາຍ — ${lastReportRangeLabel}`, ['ເວລາ','ລາຍການ','ຊຳລະ','ລວມ','ກຳໄລ'], rows, extra);
 });
 
 initApp('reports', renderReports);

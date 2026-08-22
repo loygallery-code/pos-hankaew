@@ -61,6 +61,7 @@
         <option value="month">30 ວັນຫຼັງສຸດ</option>
         <option value="all">ທັງໝົດ</option>
       </select>
+      <button class="btn btn-ghost" style="width:auto;margin-top:0;" id="printReportBtn">🖨 ພິມລາຍງານ</button>
     </div>
     <div class="stat-row" id="reportStats"></div>
     <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;">
@@ -94,6 +95,8 @@
     </div>
   </div>
 </div>
+
+<div class="report-print" id="reportPrintArea"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>

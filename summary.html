@@ -62,6 +62,7 @@
         </select>
         <select id="sumMonth" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;"></select>
         <select id="sumYear" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;"></select>
+        <button class="btn btn-ghost" style="width:auto;margin-top:0;" id="printSummaryBtn">🖨 ພິມລາຍງານ</button>
       </div>
     </div>
 
@@ -85,6 +86,8 @@
     <div class="stat-row" id="sumDebtStats"></div>
   </main>
 </div>
+
+<div class="report-print" id="reportPrintArea"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>

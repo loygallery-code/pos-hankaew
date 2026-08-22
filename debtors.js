@@ -8,7 +8,7 @@ let payments = [];
 async function loadDebtData(){
   const [{ data: d, error: dErr }, { data: s, error: sErr }, { data: p, error: pErr }] = await Promise.all([
     sb.from('debtors').select('*').order('created_at'),
-    sb.from('sales').select('*').eq('is_credit', true),
+    sb.from('sales').select('*, sale_items(*)').eq('is_credit', true),
     sb.from('debt_payments').select('*'),
   ]);
   if(dErr){ alert('ໂຫຼດລູກໜີ້ບໍ່ໄດ້: ' + dErr.message); return; }
@@ -24,10 +24,12 @@ function debtorBalance(debtorId){
 }
 
 function renderDebtors(){
+  const q = (document.getElementById('debtorSearch').value||'').trim().toLowerCase();
   const tbody = document.getElementById('debtorsTbody');
   tbody.innerHTML = '';
   let totalOutstanding = 0;
-  debtors.forEach(d=>{
+  const list = debtors.filter(d=>d.name.toLowerCase().includes(q));
+  list.forEach(d=>{
     const balance = debtorBalance(d.id);
     totalOutstanding += balance;
     const tr = document.createElement('tr');
@@ -39,15 +41,25 @@ function renderDebtors(){
     tr.addEventListener('click', ()=>openDebtorDetail(d.id));
     tbody.appendChild(tr);
   });
-  if(debtors.length===0) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">ຍັງບໍ່ມີລູກໜີ້</td></tr>';
+  if(list.length===0) tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">${debtors.length===0?'ຍັງບໍ່ມີລູກໜີ້':'ບໍ່ພົບລູກໜີ້'}</td></tr>`;
 
+  // ສະຖິຕິລວມໃຊ້ຄ່າຈາກ debtors ທັງໝົດ (ບໍ່ຖືກກັ່ນຕອງໂດຍການຄົ້ນຫາ)
   const debtorsWithBalance = debtors.filter(d=>debtorBalance(d.id) > 0).length;
+  const allTotalOutstanding = debtors.reduce((s,d)=>s+debtorBalance(d.id),0);
   document.getElementById('debtorStats').innerHTML = `
-    <div class="stat alert"><div class="label">ໜີ້ຄົງເຫຼືອທັງໝົດ</div><div class="val mono">${fmt(totalOutstanding)}</div></div>
+    <div class="stat alert"><div class="label">ໜີ້ຄົງເຫຼືອທັງໝົດ</div><div class="val mono">${fmt(allTotalOutstanding)}</div></div>
     <div class="stat"><div class="label">ຈຳນວນລູກໜີ້ຄ້າງຢູ່</div><div class="val">${debtorsWithBalance}</div></div>
     <div class="stat"><div class="label">ຈຳນວນລູກໜີ້ທັງໝົດ</div><div class="val">${debtors.length}</div></div>
   `;
 }
+document.getElementById('debtorSearch').addEventListener('input', renderDebtors);
+
+document.getElementById('printDebtorsBtn').addEventListener('click', ()=>{
+  const rows = debtors.map(d => [d.name, d.phone||'-', fmt(debtorBalance(d.id))]);
+  const total = debtors.reduce((s,d)=>s+debtorBalance(d.id),0);
+  const extra = `<div class="rp-stats"><div><strong>ໜີ້ຄົງເຫຼືອທັງໝົດ:</strong> ${fmt(total)}</div><div><strong>ຈຳນວນລູກໜີ້:</strong> ${debtors.length}</div></div>`;
+  printReportTable('ລາຍງານລູກໜີ້', ['ຊື່ລູກໜີ້','ເບີໂທ','ໜີ້ຄົງເຫຼືອ'], rows, extra);
+});
 
 document.getElementById('addDebtorBtn').addEventListener('click', ()=>{
   document.getElementById('dmName').value=''; document.getElementById('dmPhone').value=''; document.getElementById('dmNotes').value='';
@@ -76,8 +88,8 @@ function openDebtorDetail(id){
   document.getElementById('ddPaymentAmount').value='';
 
   const events = [
-    ...creditSales.filter(s=>s.debtor_id===id).map(s=>({ ts: s.created_at, label: 'ຕິດໜີ້ (ຊື້ເຄື່ອງ)', amount: Number(s.total), sign: 1 })),
-    ...payments.filter(p=>p.debtor_id===id).map(p=>({ ts: p.created_at, label: 'ຮັບຊຳລະ', amount: Number(p.amount), sign: -1 })),
+    ...creditSales.filter(s=>s.debtor_id===id).map(s=>({ ts: s.created_at, label: 'ຕິດໜີ້ (ຊື້ເຄື່ອງ)', amount: Number(s.total), sign: 1, sale: s })),
+    ...payments.filter(p=>p.debtor_id===id).map(p=>({ ts: p.created_at, label: 'ຮັບຊຳລະ', amount: Number(p.amount), sign: -1, sale: null })),
   ].sort((a,b)=> new Date(b.ts) - new Date(a.ts));
 
   const hist = document.getElementById('ddHistory');
@@ -85,15 +97,33 @@ function openDebtorDetail(id){
   events.forEach(ev=>{
     const row = document.createElement('div');
     row.className = 'cart-row';
+    if(ev.sale) row.style.cursor = 'pointer';
     row.innerHTML = `<div style="flex:1;">
-        <div class="ci-name">${ev.label}</div>
+        <div class="ci-name">${ev.label}${ev.sale?' <span style="font-size:10px;color:var(--marigold-dark);">(ກົດເບິ່ງສິນຄ້າ)</span>':''}</div>
         <div class="ci-sub">${new Date(ev.ts).toLocaleString('lo-LA',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
       </div>
       <div class="ci-total mono" style="color:${ev.sign>0?'var(--brick)':'var(--canopy-dark)'}">${ev.sign>0?'+':'−'}${fmt(ev.amount)}</div>`;
+    if(ev.sale) row.addEventListener('click', ()=>openCreditItems(ev.sale));
     hist.appendChild(row);
   });
   document.getElementById('debtorDetailModalBg').classList.add('open');
 }
+
+function openCreditItems(sale){
+  document.getElementById('ciTime').textContent = new Date(sale.created_at).toLocaleString('lo-LA');
+  const items = sale.sale_items || [];
+  document.getElementById('ciItems').innerHTML = items.length ? items.map(it => `
+    <div class="cart-row">
+      <div style="flex:1;">
+        <div class="ci-name">${it.name}</div>
+        <div class="ci-sub">${it.qty} ${it.unit} × ${fmt(it.price)}</div>
+      </div>
+      <div class="ci-total mono">${fmt(it.qty*it.price)}</div>
+    </div>`).join('') : '<div class="empty-note">ບໍ່ມີລາຍການ</div>';
+  document.getElementById('ciTotal').textContent = fmt(sale.total);
+  document.getElementById('creditItemsModalBg').classList.add('open');
+}
+document.getElementById('ciClose').addEventListener('click', ()=>document.getElementById('creditItemsModalBg').classList.remove('open'));
 document.getElementById('ddClose').addEventListener('click', ()=>document.getElementById('debtorDetailModalBg').classList.remove('open'));
 document.getElementById('ddSavePayment').addEventListener('click', async ()=>{
   const amount = parseFloat(document.getElementById('ddPaymentAmount').value)||0;

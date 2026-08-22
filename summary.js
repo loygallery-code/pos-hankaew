@@ -36,7 +36,7 @@ function getPeriodRange(){
 }
 
 async function renderSummary(){
-  const { start, end } = getPeriodRange();
+  const { start, end, label } = getPeriodRange();
 
   const { data: sales, error: salesErr } = await sb.from('sales').select('*, sale_items(*)').gte('created_at', start).lt('created_at', end);
   if(salesErr){ alert('ໂຫຼດຂໍ້ມູນບໍ່ໄດ້: ' + salesErr.message); return; }
@@ -101,7 +101,27 @@ async function renderSummary(){
     <div class="stat"><div class="label">ໜີ້ໃໝ່ໃນຊ່ວງນີ້</div><div class="val mono">${fmt(newDebtInPeriod)}</div></div>
     <div class="stat"><div class="label">ຮັບຊຳລະໜີ້ໃນຊ່ວງນີ້</div><div class="val mono">${fmt(paidInPeriod)}</div></div>
   `;
+
+  lastSummary = { label, totalRevenue, totalCost, totalProfit, saleCount: sales.length, creditCount, catRows, totalOutstandingNow, newDebtInPeriod, paidInPeriod };
 }
+
+let lastSummary = null;
+document.getElementById('printSummaryBtn').addEventListener('click', ()=>{
+  if(!lastSummary) return;
+  const s = lastSummary;
+  const rows = s.catRows.map(([cat,d]) => [cat, fmt(d.revenue), fmt(d.cost), fmt(d.revenue-d.cost)]);
+  const extra = `<div class="rp-stats">
+    <div><strong>ຍອດຂາຍ:</strong> ${fmt(s.totalRevenue)}</div>
+    <div><strong>ຕົ້ນທຶນ:</strong> ${fmt(s.totalCost)}</div>
+    <div><strong>ກຳໄລສຸດທິ:</strong> ${fmt(s.totalProfit)}</div>
+    <div><strong>ຈຳນວນບິນ:</strong> ${s.saleCount}</div>
+    <div><strong>ບິນຕິດໜີ້:</strong> ${s.creditCount}</div>
+    <div><strong>ໜີ້ຄົງເຫຼືອທັງໝົດ:</strong> ${fmt(s.totalOutstandingNow)}</div>
+    <div><strong>ໜີ້ໃໝ່ໃນຊ່ວງນີ້:</strong> ${fmt(s.newDebtInPeriod)}</div>
+    <div><strong>ຮັບຊຳລະໜີ້ໃນຊ່ວງນີ້:</strong> ${fmt(s.paidInPeriod)}</div>
+  </div>`;
+  printReportTable(`ສະຫຼຸບບັນຊີ — ${s.label}`, ['ໝວດ','ຍອດຂາຍ','ຕົ້ນທຶນ','ກຳໄລ'], rows, extra);
+});
 
 initApp('summary', async ()=>{
   populateSelectors();
